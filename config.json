@@ -1,0 +1,20 @@
+{
+	"nombreInterfaz": "tincVPN",
+	"x64": true,
+	"nombreVPN": "vpn",
+	"api": "http://rpv.moralesm.cl:1723",
+	"cliente": {
+		"id": null,
+		"publicKey": null,
+		"subNet": "13.13.1.0/24"
+	},
+	"server": {
+		"id": "server",
+		"address": null,
+		"publicKey": null,
+		"gateway": "13.13.1.1"
+	},
+	"rutas": [
+	],
+	"tincDebugLevel": 0
+}
