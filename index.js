@@ -468,7 +468,7 @@ let verificarRequisitos = function () {
         ordenEjecucion.splice(ordenEjecucion.indexOf(crearBase), 1);
     }
 
-    if (fs.existsSync("./" + config.nombreVPN + "/rsa_key.priv")) {
+    if (fs.existsSync("./" + config.nombreVPN + "/rsa_key.priv") && config.publicKey) {
         ordenEjecucion.splice(ordenEjecucion.indexOf(crearPublicKey), 1);
     }
 }
