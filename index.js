@@ -1,10 +1,39 @@
-const config = require('./config.json')
 const { execSync, execFileSync, exec, execFile, spawn } = require('child_process');
 const elevator = require('elevator');
 const sudo = require('sudo-prompt');
 const fs = require('fs');
 const request = require('request');
 const dns = require('dns-sync');
+let config = null;
+
+let validarConfig = function () {
+    if (!fs.existsSync('./config.json')) {
+        let defaultCfg = {
+            "nombreInterfaz": "tincVPN",
+            "x64": true,
+            "nombreVPN": "vpn",
+            "api": "http://rpv.moralesm.cl:1723",
+            "cliente": {
+                "id": null,
+                "publicKey": null,
+                "subNet": "13.13.1.0/24"
+            },
+            "server": {
+                "id": "server",
+                "address": null,
+                "publicKey": null,
+                "gateway": "13.13.1.1"
+            },
+            "rutas": [
+            ],
+            "tincDebugLevel": 0
+        }
+
+        fs.writeFileSync("./config.json", JSON.stringify(defaultCfg, null, "\t"));
+    }
+
+    config = require('./config.json');
+}
 
 let actualizarConfig = function (key, valor) {
     let direccion = key.split('.');
@@ -127,15 +156,19 @@ let createDir = function (dir) {
     }
 }
 
+let crearArchivoHostCliente = function () {
+
+    actualizarConfig("cliente.id", require('uuid/v4')().replace(/-/g, "_"));
+
+    fs.writeFileSync("./" + config.nombreVPN + "/hosts/" + config.cliente.id, "Subnet = " + config.cliente.subNet + "\r\n");
+}
+
 let crearBase = function () {
     createDir("./" + config.nombreVPN);
     createDir("./" + config.nombreVPN + "/hosts");
 
-    if (!config.cliente.id) {
-        actualizarConfig("cliente.id", require('uuid/v4')().replace(/-/g, "_"));
-    }
+    crearArchivoHostCliente();
 
-    fs.writeFileSync("./" + config.nombreVPN + "/hosts/" + config.cliente.id, "Subnet = " + config.cliente.subNet + "\r\n");
     fs.writeFileSync("./" + config.nombreVPN + "/tinc.conf", "Name = " + config.cliente.id);
     fs.appendFileSync("./" + config.nombreVPN + "/tinc.conf", "\nAddressFamily = ipv4");
     fs.appendFileSync("./" + config.nombreVPN + "/tinc.conf", "\nInterface = " + config.nombreInterfaz);
@@ -229,10 +262,10 @@ let obtenerIPs = function (ruta) {
     let ips = [];
     let retornoDns = dns.resolve(ruta.dominio, 'A');
 
-    if(!Array.isArray(retornoDns)){
+    if (!Array.isArray(retornoDns)) {
         ips.push(retornoDns);
     }
-    else{
+    else {
         ips = retornoDns;
     }
 
@@ -376,7 +409,7 @@ let conectarVPN = function () {
     });
 
     child.stderr.on('data', data => {
-        if(data.toString().indexOf("activated") > -1){
+        if (data.toString().indexOf("activated") > -1) {
             ejecutar();
         }
 
@@ -386,13 +419,13 @@ let conectarVPN = function () {
     ejecutar();
 }
 
-let asignarIP = function(ip, mascara){
+let asignarIP = function (ip, mascara) {
     let cmdCambio = 'netsh interface ipv4 set address name="' + config.nombreInterfaz + '" static ' + ip + ' ' + mascara;
     let cmdVerificar = 'netsh interface ipv4 show config name="' + config.nombreInterfaz + '"';
 
-    try{
+    try {
         let cfgInterfaz = execSync(cmdVerificar).toString();
-        if(cfgInterfaz.indexOf(ip) < 0 || cfgInterfaz.indexOf(mascara) < 0 ){
+        if (cfgInterfaz.indexOf(ip) < 0 || cfgInterfaz.indexOf(mascara) < 0) {
             sudo.exec(cmdCambio, { name: "Cliente RPV" }, (error, stdout, stderr) => {
                 if (error) {
                     console.error(`exec error: ${error}`);
@@ -403,17 +436,17 @@ let asignarIP = function(ip, mascara){
                 }
             });
         }
-        else{
+        else {
             console.info('Conectado y listo para jugar');
         }
     }
-    catch(err){
+    catch (err) {
         console.error(err);
         process.exit(1);
     }
 }
 
-let solicitarIP = function(){
+let solicitarIP = function () {
 
     let options = {
         url: config.api + '/obtenerIp/' + config.cliente.id,
@@ -455,6 +488,8 @@ let ejecutar = function () {
 
 let verificarRequisitos = function () {
 
+    validarConfig();
+
     if (verificarTapAdapter()) {
         ordenEjecucion.splice(ordenEjecucion.indexOf(instalarAdaptador), 1);
     }
@@ -468,7 +503,7 @@ let verificarRequisitos = function () {
         ordenEjecucion.splice(ordenEjecucion.indexOf(crearBase), 1);
     }
 
-    if (fs.existsSync("./" + config.nombreVPN + "/rsa_key.priv") && config.publicKey) {
+    if (fs.existsSync("./" + config.nombreVPN + "/rsa_key.priv") && config.cliente.publicKey && config.server.publicKey) {
         ordenEjecucion.splice(ordenEjecucion.indexOf(crearPublicKey), 1);
     }
 }
