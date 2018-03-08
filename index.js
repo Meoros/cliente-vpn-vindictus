@@ -102,7 +102,7 @@ let obtenerUltimoAdaptador = function () {
     let lineasRetorno = stdout.toString('utf8').split('\n');
 
     lineasRetorno.forEach(linea => {
-        if (linea && linea.length > 1) {
+        if (linea && linea.length > 1 && linea.indexOf("Ethernet") > -1) {
             adaptador = linea.replace(/^[^\s\t]+[\s\t]+[^\s\t]+[\s\t]+[^\s\t]+[\s\t]+/, "");
         }
     });
